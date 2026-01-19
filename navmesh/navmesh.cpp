@@ -89,7 +89,8 @@ NavMeshHandle load_navmesh_from_file(const char* filename) {
         return nullptr;
     }
     
-    delete[] data;
+    // Don't delete data here because DT_TILE_FREE_DATA flag tells dtNavMesh to manage it
+    // delete[] data;
     
     printf("Successfully loaded navmesh from %s\n", filename);
     return static_cast<NavMeshHandle>(wrapper);
