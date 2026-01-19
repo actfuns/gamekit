@@ -10,15 +10,15 @@ import (
 
 func main() {
 	// 使用当前工作目录下的detour.bin
-	detourFile := "detour.bin"
+	navMeshFile := "../assets/navmesh.bin"
 
 	// 检查文件是否存在
-	if _, err := os.Stat(detourFile); os.IsNotExist(err) {
-		log.Fatalf("Navigation mesh file %s does not exist in current directory", detourFile)
+	if _, err := os.Stat(navMeshFile); os.IsNotExist(err) {
+		log.Fatalf("Navigation mesh file %s does not exist in current directory", navMeshFile)
 	}
 
 	// Load navigation mesh
-	nm, err := detour.LoadNavMeshFromFile(detourFile)
+	nm, err := detour.LoadNavMeshFromFile(navMeshFile)
 	if err != nil {
 		log.Fatalf("Failed to load detour: %v", err)
 	}

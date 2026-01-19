@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# Auto-fix CRLF line endings if present
+if [ "$(head -n1 "$0" | cat -A | tail -c2)" = "^M$" ]; then
+    # File has CRLF line endings, fix it
+    sed -i 's/\r$//' "$0"
+    echo "Fixed CRLF line endings in script, re-executing..."
+    exec "$0" "$@"
+fi
+
 # Build RecastNavigation libraries and install to project directories
 set -e
 
@@ -33,7 +41,12 @@ case $ARCH in
         ;;
 esac
 
-PLATFORM_DIR="${OS}_${ARCH_NAME}"
+# Handle MSYS2 platform naming
+if [[ "$OS" == msys_nt* ]]; then
+    PLATFORM_DIR="windows_${ARCH_NAME}"
+else
+    PLATFORM_DIR="${OS}_${ARCH_NAME}"
+fi
 
 echo "Detected platform: $OS ($ARCH_NAME)"
 echo "Target directory: lib/$PLATFORM_DIR/"
@@ -60,13 +73,26 @@ cd third_party/recastnavigation/build
 
 # Configure with CMake - only build core libraries, disable everything else
 echo "Configuring RecastNavigation build..."
-cmake .. \
-    -DDISABLE_ASSERTS=ON \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DRECASTNAVIGATION_DEMO=OFF \
-    -DRECASTNAVIGATION_TESTS=OFF \
-    -DRECASTNAVIGATION_EXAMPLES=OFF \
-    -DRECASTNAVIGATION_STATIC=ON
+if [[ "$OS" == msys_nt* ]]; then
+    # Force use of Unix Makefiles generator on MSYS2/Windows
+    cmake .. \
+        -G "Unix Makefiles" \
+        -DDISABLE_ASSERTS=ON \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DRECASTNAVIGATION_DEMO=OFF \
+        -DRECASTNAVIGATION_TESTS=OFF \
+        -DRECASTNAVIGATION_EXAMPLES=OFF \
+        -DRECASTNAVIGATION_STATIC=ON
+else
+    # Use default generator on other platforms (Linux/macOS)
+    cmake .. \
+        -DDISABLE_ASSERTS=ON \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DRECASTNAVIGATION_DEMO=OFF \
+        -DRECASTNAVIGATION_TESTS=OFF \
+        -DRECASTNAVIGATION_EXAMPLES=OFF \
+        -DRECASTNAVIGATION_STATIC=ON
+fi
 
 # Build only the specific targets we need
 echo "Building RecastNavigation libraries..."
