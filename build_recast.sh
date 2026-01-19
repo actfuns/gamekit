@@ -42,7 +42,7 @@ case $ARCH in
 esac
 
 # Handle MSYS2 platform naming
-if [[ "$OS" == msys_nt* ]]; then
+if [[ "$OS" == mingw64* ]]; then
     PLATFORM_DIR="windows_${ARCH_NAME}"
 else
     PLATFORM_DIR="${OS}_${ARCH_NAME}"
@@ -73,30 +73,55 @@ cd third_party/recastnavigation/build
 
 # Configure with CMake - only build core libraries, disable everything else
 echo "Configuring RecastNavigation build..."
-if [[ "$OS" == msys_nt* ]]; then
-    # Force use of Unix Makefiles generator on MSYS2/Windows
-    cmake .. \
-        -G "Unix Makefiles" \
-        -DDISABLE_ASSERTS=ON \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DRECASTNAVIGATION_DEMO=OFF \
-        -DRECASTNAVIGATION_TESTS=OFF \
-        -DRECASTNAVIGATION_EXAMPLES=OFF \
-        -DRECASTNAVIGATION_STATIC=ON
+# Don't force generator on MSYS2, let CMake choose automatically
+cmake .. \
+    -DDISABLE_ASSERTS=ON \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DRECASTNAVIGATION_DEMO=OFF \
+    -DRECASTNAVIGATION_TESTS=OFF \
+    -DRECASTNAVIGATION_EXAMPLES=OFF \
+    -DRECASTNAVIGATION_STATIC=ON
+
+# Detect which build system CMake generated
+BUILD_CMD=""
+if [ -f "build.ninja" ]; then
+    # Ninja build system detected
+    if command -v ninja >/dev/null 2>&1; then
+        BUILD_CMD="ninja"
+    elif command -v ninja-build >/dev/null 2>&1; then
+        BUILD_CMD="ninja-build"
+    else
+        echo "Error: Ninja build system detected but ninja command not found!"
+        echo "Please install ninja: pacman -S mingw-w64-x86_64-ninja"
+        exit 1
+    fi
+elif [ -f "Makefile" ]; then
+    # Make build system detected
+    if command -v make >/dev/null 2>&1; then
+        BUILD_CMD="make"
+    elif command -v mingw32-make >/dev/null 2>&1; then
+        BUILD_CMD="mingw32-make"
+    else
+        echo "Error: Make build system detected but make command not found!"
+        echo "Please install make: pacman -S mingw-w64-x86_64-make"
+        exit 1
+    fi
 else
-    # Use default generator on other platforms (Linux/macOS)
-    cmake .. \
-        -DDISABLE_ASSERTS=ON \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DRECASTNAVIGATION_DEMO=OFF \
-        -DRECASTNAVIGATION_TESTS=OFF \
-        -DRECASTNAVIGATION_EXAMPLES=OFF \
-        -DRECASTNAVIGATION_STATIC=ON
+    echo "Error: No recognized build system files found (neither build.ninja nor Makefile)!"
+    echo "CMake configuration may have failed."
+    exit 1
 fi
 
 # Build only the specific targets we need
-echo "Building RecastNavigation libraries..."
-make -j$(get_nproc) Detour DetourCrowd DetourTileCache
+echo "Building RecastNavigation libraries with $BUILD_CMD..."
+if [ "$BUILD_CMD" = "ninja" ] || [ "$BUILD_CMD" = "ninja-build" ]; then
+    # Ninja doesn't support -j option the same way, but uses parallel by default
+    # We can use -j to specify explicit parallelism if needed
+    $BUILD_CMD -j$(get_nproc) Detour DetourCrowd DetourTileCache
+else
+    # Make supports -j for parallel builds
+    $BUILD_CMD -j$(get_nproc) Detour DetourCrowd DetourTileCache
+fi
 
 # Create target directories
 mkdir -p ../../../lib/$PLATFORM_DIR
