@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"d:/ws/dr/detour"
+	"dr/navmesh"
 )
 
 func main() {
@@ -47,7 +47,7 @@ func main() {
 	fmt.Printf("Output file: %s\n", *outputFile)
 	
 	// Build navigation mesh
-	err := detour.BuildNavMeshFromObj(
+	err := navmesh.BuildNavMeshFromObj(
 		*objFile, *outputFile,
 		float32(*cellSize), float32(*cellHeight),
 		float32(*agentHeight), float32(*agentRadius), float32(*agentMaxClimb), float32(*agentMaxSlope),

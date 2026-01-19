@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"dr/detour"
+	"dr/navmesh"
 )
 
 func main() {
@@ -18,14 +18,14 @@ func main() {
 	}
 
 	// Load navigation mesh
-	nm, err := detour.LoadNavMeshFromFile(navMeshFile)
+	nm, err := navmesh.LoadNavMeshFromFile(navMeshFile)
 	if err != nil {
 		log.Fatalf("Failed to load detour: %v", err)
 	}
 	defer nm.Close()
 
 	// Create tile cache with parameters
-	params := detour.TileCacheParams{
+	params := navmesh.TileCacheParams{
 		Orig:                   [3]float32{0, 0, 0},
 		Cs:                     0.3,
 		Ch:                     0.2,
@@ -39,7 +39,7 @@ func main() {
 		MaxObstacles:           128,
 	}
 
-	tileCache, err := detour.CreateTileCache(params)
+	tileCache, err := navmesh.CreateTileCache(params)
 	if err != nil {
 		log.Fatalf("Failed to create tile cache: %v", err)
 	}

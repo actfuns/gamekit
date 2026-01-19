@@ -117,27 +117,30 @@ echo "Building RecastNavigation libraries with $BUILD_CMD..."
 if [ "$BUILD_CMD" = "ninja" ] || [ "$BUILD_CMD" = "ninja-build" ]; then
     # Ninja doesn't support -j option the same way, but uses parallel by default
     # We can use -j to specify explicit parallelism if needed
-    $BUILD_CMD -j$(get_nproc) Detour DetourCrowd DetourTileCache
+    $BUILD_CMD -j$(get_nproc) Recast Detour DetourCrowd DetourTileCache
 else
     # Make supports -j for parallel builds
-    $BUILD_CMD -j$(get_nproc) Detour DetourCrowd DetourTileCache
+    $BUILD_CMD -j$(get_nproc) Recast Detour DetourCrowd DetourTileCache
 fi
 
 # Create target directories
 mkdir -p ../../../lib/$PLATFORM_DIR
 mkdir -p ../../../include/recastnavigation
+mkdir -p ../../../include/recastnavigation/recast
 mkdir -p ../../../include/recastnavigation/detour
 mkdir -p ../../../include/recastnavigation/detourcrowd
 mkdir -p ../../../include/recastnavigation/detourtilecache
 
 # Copy static libraries (without platform suffix in filename)
 echo "Installing libraries to project lib/$PLATFORM_DIR/ directory..."
+cp Recast/libRecast.a ../../../lib/$PLATFORM_DIR/
 cp Detour/libDetour.a ../../../lib/$PLATFORM_DIR/
 cp DetourCrowd/libDetourCrowd.a ../../../lib/$PLATFORM_DIR/
 cp DetourTileCache/libDetourTileCache.a ../../../lib/$PLATFORM_DIR/
 
 # Copy headers (headers are platform-independent)
 echo "Installing headers to project include/recastnavigation/ directory..."
+cp ../Recast/Include/*.h ../../../include/recastnavigation/recast
 cp ../Detour/Include/*.h ../../../include/recastnavigation/detour
 cp ../DetourCrowd/Include/*.h ../../../include/recastnavigation/detourcrowd
 cp ../DetourTileCache/Include/*.h ../../../include/recastnavigation/detourtilecache

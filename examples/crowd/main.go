@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"dr/detour"
+	"dr/navmesh"
 )
 
 func main() {
@@ -20,7 +20,7 @@ func main() {
 	}
 
 	// 加载导航网格
-	nm, err := detour.LoadNavMeshFromFile(navMeshFile)
+	nm, err := navmesh.LoadNavMeshFromFile(navMeshFile)
 	if err != nil {
 		log.Fatal("Failed to load navigation mesh:", err)
 	}
@@ -29,14 +29,14 @@ func main() {
 	// 创建Crowd模拟
 	maxAgents := 10
 	maxAgentRadius := float32(2.0) // 根据参考代码使用2.0作为最大代理半径
-	crowd, err := detour.CreateCrowd(maxAgents, maxAgentRadius, nm)
+	crowd, err := navmesh.CreateCrowd(maxAgents, maxAgentRadius, nm)
 	if err != nil {
 		log.Fatal("Failed to create crowd:", err)
 	}
 	defer crowd.Close()
 
 	// 设置代理参数
-	agentParams := detour.CrowdAgentParams{
+	agentParams := navmesh.CrowdAgentParams{
 		Radius:                0.5,
 		Height:                2.0,
 		MaxAcceleration:       8.0,

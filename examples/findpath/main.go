@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"dr/detour"
+	"dr/navmesh"
 )
 
 func main() {
@@ -18,14 +18,14 @@ func main() {
 	}
 
 	// Load the navigation mesh
-	detour, err := detour.LoadNavMeshFromFile(navMeshFile)
+	navMesh, err := navmesh.LoadNavMeshFromFile(navMeshFile)
 	if err != nil {
 		log.Fatal("Failed to load detour:", err)
 	}
-	defer detour.Close()
+	defer navMesh.Close()
 
 	// Create a query object for pathfinding
-	query, err := detour.CreateQuery()
+	query, err := navMesh.CreateQuery()
 	if err != nil {
 		log.Fatal("Failed to create query:", err)
 	}
