@@ -384,6 +384,341 @@ int get_crowd_active_agents(CrowdHandle handle, float* positions, float* velocit
     return numAgents;
 }
 
+// =============================================================================
+// Navigation Mesh Generation Implementation (from OBJ files)
+// =============================================================================
+
+#include "Recast.h"
+#include "RecastAlloc.h"
+#include "RecastAssert.h"
+#include "ChunkyTriMesh.h"
+
+// Simple OBJ mesh loader (adapted from RecastDemo)
+struct ObjMesh {
+    float* verts;
+    int nverts;
+    int* tris;
+    int ntris;
+    
+    ObjMesh() : verts(nullptr), nverts(0), tris(nullptr), ntris(0) {}
+    ~ObjMesh() {
+        if (verts) dtFree(verts);
+        if (tris) dtFree(tris);
+    }
+};
+
+static bool loadObj(const char* filename, ObjMesh& mesh)
+{
+    FILE* fp = fopen(filename, "r");
+    if (!fp) return false;
+    
+    // Count vertices and faces
+    int vertCount = 0, faceCount = 0;
+    char line[256];
+    while (fgets(line, sizeof(line), fp)) {
+        if (line[0] == 'v' && line[1] == ' ') vertCount++;
+        else if (line[0] == 'f') faceCount++;
+    }
+    rewind(fp);
+    
+    if (vertCount == 0 || faceCount == 0) {
+        fclose(fp);
+        return false;
+    }
+    
+    mesh.verts = (float*)dtAlloc(sizeof(float) * vertCount * 3, DT_ALLOC_PERM);
+    mesh.nverts = vertCount;
+    mesh.tris = (int*)dtAlloc(sizeof(int) * faceCount * 3, DT_ALLOC_PERM);
+    mesh.ntris = faceCount;
+    
+    int vidx = 0, tidx = 0;
+    while (fgets(line, sizeof(line), fp)) {
+        if (line[0] == 'v' && line[1] == ' ') {
+            float x, y, z;
+            if (sscanf(line, "v %f %f %f", &x, &y, &z) == 3) {
+                mesh.verts[vidx++] = x;
+                mesh.verts[vidx++] = y;
+                mesh.verts[vidx++] = z;
+            }
+        }
+        else if (line[0] == 'f') {
+            int a, b, c;
+            // Handle different face formats (f 1 2 3 or f 1/1/1 2/2/2 3/3/3)
+            if (sscanf(line, "f %d %d %d", &a, &b, &c) == 3 ||
+                sscanf(line, "f %d/%*d/%*d %d/%*d/%*d %d/%*d/%*d", &a, &b, &c) == 3) {
+                mesh.tris[tidx++] = a - 1; // OBJ is 1-indexed
+                mesh.tris[tidx++] = b - 1;
+                mesh.tris[tidx++] = c - 1;
+            }
+        }
+    }
+    
+    fclose(fp);
+    return true;
+}
+
+static unsigned char* buildTileMesh(const float* verts, const int nverts,
+                                   const int* tris, const int ntris,
+                                   const float bmin[3], const float bmax[3],
+                                   const float cellSize, const float cellHeight,
+                                   const float agentHeight, const float agentRadius,
+                                   const float agentMaxClimb, const float agentMaxSlope,
+                                   const int regionMinSize, const int regionMergeSize,
+                                   const float edgeMaxLen, const float edgeMaxError,
+                                   const int vertsPerPoly, const float detailSampleDist,
+                                   const float detailSampleMaxError,
+                                   int* outDataSize)
+{
+    rcContext ctx;
+    
+    // Calculate bounds
+    rcConfig cfg;
+    memset(&cfg, 0, sizeof(cfg));
+    cfg.cs = cellSize;
+    cfg.ch = cellHeight;
+    cfg.walkableHeight = (int)ceilf(agentHeight / cfg.ch);
+    cfg.walkableClimb = (int)floorf(agentMaxClimb / cfg.ch);
+    cfg.walkableRadius = (int)ceilf(agentRadius / cfg.cs);
+    cfg.walkableSlopeAngle = agentMaxSlope;
+    cfg.tileSize = 48;
+    cfg.borderSize = cfg.walkableRadius + 3;
+    cfg.width = cfg.tileSize + cfg.borderSize * 2;
+    cfg.height = cfg.tileSize + cfg.borderSize * 2;
+    cfg.maxEdgeLen = (int)(edgeMaxLen / cfg.cs);
+    cfg.maxSimplificationError = edgeMaxError;
+    cfg.minRegionArea = (int)rcSqr(regionMinSize);
+    cfg.mergeRegionArea = (int)rcSqr(regionMergeSize);
+    cfg.maxVertsPerPoly = vertsPerPoly;
+    cfg.detailSampleDist = detailSampleDist < 0.9f ? 0 : cfg.cs * detailSampleDist;
+    cfg.detailSampleMaxError = cfg.ch * detailSampleMaxError;
+    
+    rcVcopy(cfg.bmin, bmin);
+    rcVcopy(cfg.bmax, bmax);
+    
+    // Allocate voxel heightfield
+    rcHeightfield* hf = rcAllocHeightfield();
+    if (!hf) return nullptr;
+    
+    if (!rcCreateHeightfield(&ctx, *hf, cfg.width, cfg.height, cfg.bmin, cfg.bmax, cfg.cs, cfg.ch)) {
+        rcFreeHeightField(hf);
+        return nullptr;
+    }
+    
+    // Mark walkable triangles
+    unsigned char* triAreas = new unsigned char[ntris];
+    memset(triAreas, 0, ntris * sizeof(unsigned char));
+    rcMarkWalkableTriangles(&ctx, cfg.walkableSlopeAngle, verts, nverts, tris, ntris, triAreas);
+    
+    // Rasterize triangles
+    if (!rcRasterizeTriangles(&ctx, verts, nverts, tris, triAreas, ntris, *hf, cfg.walkableClimb)) {
+        delete[] triAreas;
+        rcFreeHeightField(hf);
+        return nullptr;
+    }
+    
+    delete[] triAreas;
+    
+    // Filter walkable areas
+    rcFilterLowHangingWalkableObstacles(&ctx, cfg.walkableClimb, *hf);
+    rcFilterLedgeSpans(&ctx, cfg.walkableHeight, cfg.walkableClimb, *hf);
+    rcFilterWalkableLowHeightSpans(&ctx, cfg.walkableHeight, *hf);
+    
+    // Partition
+    rcCompactHeightfield* chf = rcAllocCompactHeightfield();
+    if (!chf) {
+        rcFreeHeightField(hf);
+        return nullptr;
+    }
+    
+    if (!rcBuildCompactHeightfield(&ctx, cfg.walkableHeight, cfg.walkableClimb, *hf, *chf)) {
+        rcFreeCompactHeightfield(chf);
+        rcFreeHeightField(hf);
+        return nullptr;
+    }
+    
+    rcFreeHeightField(hf);
+    
+    if (!rcErodeWalkableArea(&ctx, cfg.walkableRadius, *chf)) {
+        rcFreeCompactHeightfield(chf);
+        return nullptr;
+    }
+    
+    if (!rcBuildDistanceField(&ctx, *chf)) {
+        rcFreeCompactHeightfield(chf);
+        return nullptr;
+    }
+    
+    if (!rcBuildRegions(&ctx, *chf, cfg.borderSize, cfg.minRegionArea, cfg.mergeRegionArea)) {
+        rcFreeCompactHeightfield(chf);
+        return nullptr;
+    }
+    
+    // Build contours
+    rcContourSet* cset = rcAllocContourSet();
+    if (!cset) {
+        rcFreeCompactHeightfield(chf);
+        return nullptr;
+    }
+    
+    if (!rcBuildContours(&ctx, *chf, cfg.maxSimplificationError, cfg.maxEdgeLen, *cset)) {
+        rcFreeContourSet(cset);
+        rcFreeCompactHeightfield(chf);
+        return nullptr;
+    }
+    
+    if (cset->nconts == 0) {
+        rcFreeContourSet(cset);
+        rcFreeCompactHeightfield(chf);
+        return nullptr;
+    }
+    
+    // Build polymesh
+    rcPolyMesh* pmesh = rcAllocPolyMesh();
+    if (!pmesh) {
+        rcFreePolyMesh(pmesh);
+        rcFreeContourSet(cset);
+        rcFreeCompactHeightfield(chf);
+        return nullptr;
+    }
+    
+    if (!rcBuildPolyMesh(&ctx, *cset, cfg.maxVertsPerPoly, *pmesh)) {
+        rcFreePolyMesh(pmesh);
+        rcFreeContourSet(cset);
+        rcFreeCompactHeightfield(chf);
+        return nullptr;
+    }
+    
+    // Build detail mesh
+    rcPolyMeshDetail* dmesh = rcAllocPolyMeshDetail();
+    if (!dmesh) {
+        rcFreePolyMeshDetail(dmesh);
+        rcFreePolyMesh(pmesh);
+        rcFreeContourSet(cset);
+        rcFreeCompactHeightfield(chf);
+        return nullptr;
+    }
+    
+    if (!rcBuildPolyMeshDetail(&ctx, *pmesh, *chf, cfg.detailSampleDist, cfg.detailSampleMaxError, *dmesh)) {
+        rcFreePolyMeshDetail(dmesh);
+        rcFreePolyMesh(pmesh);
+        rcFreeContourSet(cset);
+        rcFreeCompactHeightfield(chf);
+        return nullptr;
+    }
+    
+    rcFreeCompactHeightfield(chf);
+    rcFreeContourSet(cset);
+    
+    // Set flags
+    for (int i = 0; i < pmesh->npolys; ++i) {
+        pmesh->flags[i] = 1; // All polygons are walkable
+    }
+    
+    // Create navmesh data
+    dtNavMeshCreateParams params;
+    memset(&params, 0, sizeof(params));
+    params.verts = pmesh->verts;
+    params.vertCount = pmesh->nverts;
+    params.polys = pmesh->polys;
+    params.polyAreas = pmesh->areas;
+    params.polyFlags = pmesh->flags;
+    params.polyCount = pmesh->npolys;
+    params.nvp = pmesh->nvp;
+    params.detailMeshes = dmesh->meshes;
+    params.detailVerts = dmesh->verts;
+    params.detailVertsCount = dmesh->nverts;
+    params.detailTris = dmesh->tris;
+    params.detailTriCount = dmesh->ntris;
+    rcVcopy(params.bmin, pmesh->bmin);
+    rcVcopy(params.bmax, pmesh->bmax);
+    params.walkableHeight = agentHeight;
+    params.walkableRadius = agentRadius;
+    params.walkableClimb = agentMaxClimb;
+    params.tileX = 0;
+    params.tileY = 0;
+    params.tileLayer = 0;
+    params.cs = cfg.cs;
+    params.ch = cfg.ch;
+    params.buildBvTree = true;
+    
+    unsigned char* navData = 0;
+    int navDataSize = 0;
+    if (!dtCreateNavMeshData(&params, &navData, &navDataSize)) {
+        rcFreePolyMeshDetail(dmesh);
+        rcFreePolyMesh(pmesh);
+        return nullptr;
+    }
+    
+    rcFreePolyMeshDetail(dmesh);
+    rcFreePolyMesh(pmesh);
+    
+    *outDataSize = navDataSize;
+    return navData;
+}
+
+bool build_navmesh_from_obj(const char* obj_filename, const char* output_filename,
+                           float cellSize, float cellHeight,
+                           float agentHeight, float agentRadius, float agentMaxClimb, float agentMaxSlope,
+                           int regionMinSize, int regionMergeSize,
+                           float edgeMaxLen, float edgeMaxError,
+                           int vertsPerPoly, float detailSampleDist, float detailSampleMaxError)
+{
+    // Load OBJ mesh
+    ObjMesh mesh;
+    if (!loadObj(obj_filename, mesh)) {
+        return false;
+    }
+    
+    if (mesh.nverts == 0 || mesh.ntris == 0) {
+        return false;
+    }
+    
+    // Calculate bounding box
+    float bmin[3] = {FLT_MAX, FLT_MAX, FLT_MAX};
+    float bmax[3] = {-FLT_MAX, -FLT_MAX, -FLT_MAX};
+    for (int i = 0; i < mesh.nverts; ++i) {
+        const float* v = &mesh.verts[i * 3];
+        bmin[0] = rcMin(bmin[0], v[0]);
+        bmin[1] = rcMin(bmin[1], v[1]);
+        bmin[2] = rcMin(bmin[2], v[2]);
+        bmax[0] = rcMax(bmax[0], v[0]);
+        bmax[1] = rcMax(bmax[1], v[1]);
+        bmax[2] = rcMax(bmax[2], v[2]);
+    }
+    
+    // Expand bounds by 1 unit on each side
+    bmin[0] -= 1.0f; bmin[1] -= 1.0f; bmin[2] -= 1.0f;
+    bmax[0] += 1.0f; bmax[1] += 1.0f; bmax[2] += 1.0f;
+    
+    // Build navigation mesh tile
+    int dataSize = 0;
+    unsigned char* navData = buildTileMesh(mesh.verts, mesh.nverts, mesh.tris, mesh.ntris,
+                                          bmin, bmax,
+                                          cellSize, cellHeight,
+                                          agentHeight, agentRadius, agentMaxClimb, agentMaxSlope,
+                                          regionMinSize, regionMergeSize,
+                                          edgeMaxLen, edgeMaxError,
+                                          vertsPerPoly, detailSampleDist, detailSampleMaxError,
+                                          &dataSize);
+    
+    if (!navData || dataSize == 0) {
+        return false;
+    }
+    
+    // Save to file
+    FILE* fp = fopen(output_filename, "wb");
+    if (!fp) {
+        dtFree(navData);
+        return false;
+    }
+    
+    fwrite(navData, 1, dataSize, fp);
+    fclose(fp);
+    dtFree(navData);
+    
+    return true;
+}
+
 #ifdef __cplusplus
 }
 #endif

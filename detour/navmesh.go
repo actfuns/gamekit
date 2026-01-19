@@ -1,5 +1,10 @@
 package detour
 
+import (
+	"fmt"
+	"unsafe"
+)
+
 /*
 #cgo CXXFLAGS: -std=c++11 -I${SRCDIR}/../include/recastnavigation/detour -I${SRCDIR}/../include/recastnavigation/detourcrowd -I${SRCDIR}/../include/recastnavigation/detourtilecache
 #cgo linux,amd64 LDFLAGS: -L${SRCDIR}/../lib/linux_x64 -lDetourTileCache -lDetourCrowd -lDetour -lstdc++
@@ -53,20 +58,19 @@ func (nmq *NavMeshQuery) FindStraightPath(startX, startY, startZ, endX, endY, en
 		cPath, C.int(maxPoints),
 	)
 
-	if result != 0 {
-		return nil, ErrNoPathFound
+	if result <= 0 {
+		return nil, ErrFailedToFindPath
 	}
 
-	// The actual number of points is returned in the result or we need to track it differently
-	// For now, let's assume the path is valid and extract all points
-	// In a real implementation, we would need to get the actual count from the C function
-
 	// Convert C array to Go slice
-	// We'll return a single point as a placeholder since we don't know the actual count
-	path := make([][3]float32, 1)
-	path[0][0] = endX
-	path[0][1] = endY
-	path[0][2] = endZ
+	path := make([][3]float32, result)
+	ptr := uintptr(unsafe.Pointer(cPath))
+	for i := 0; i < int(result); i++ {
+		path[i][0] = *(*float32)(unsafe.Pointer(ptr))
+		path[i][1] = *(*float32)(unsafe.Pointer(ptr + 4))
+		path[i][2] = *(*float32)(unsafe.Pointer(ptr + 8))
+		ptr += 12 // 3 * 4 bytes
+	}
 
 	return path, nil
 }
@@ -85,4 +89,33 @@ func (nmq *NavMeshQuery) Close() {
 		C.destroy_navmesh_query(nmq.handle)
 		nmq.handle = nil
 	}
+}
+
+// BuildNavMeshFromObj builds a navigation mesh from an OBJ file and saves it to a binary file
+func BuildNavMeshFromObj(objFilename, outputFilename string,
+	cellSize, cellHeight float32,
+	agentHeight, agentRadius, agentMaxClimb, agentMaxSlope float32,
+	regionMinSize, regionMergeSize int,
+	edgeMaxLen, edgeMaxError float32,
+	vertsPerPoly int, detailSampleDist, detailSampleMaxError float32) error {
+	
+	cObjFilename := C.CString(objFilename)
+	defer C.free(unsafe.Pointer(cObjFilename))
+	
+	cOutputFilename := C.CString(outputFilename)
+	defer C.free(unsafe.Pointer(cOutputFilename))
+	
+	success := C.build_navmesh_from_obj(
+		cObjFilename, cOutputFilename,
+		C.float(cellSize), C.float(cellHeight),
+		C.float(agentHeight), C.float(agentRadius), C.float(agentMaxClimb), C.float(agentMaxSlope),
+		C.int(regionMinSize), C.int(regionMergeSize),
+		C.float(edgeMaxLen), C.float(edgeMaxError),
+		C.int(vertsPerPoly), C.float(detailSampleDist), C.float(detailSampleMaxError))
+	
+	if !success {
+		return fmt.Errorf("failed to build navigation mesh from OBJ file")
+	}
+	
+	return nil
 }

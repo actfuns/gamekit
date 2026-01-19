@@ -99,6 +99,18 @@ void update_crowd(CrowdHandle handle, float dt);
 // Get active agents' positions and velocities
 int get_crowd_active_agents(CrowdHandle handle, float* positions, float* velocities, int maxAgents);
 
+// =============================================================================
+// Navigation Mesh Generation Functions (from OBJ files)
+// =============================================================================
+
+// Build navigation mesh from OBJ file and save to binary file
+bool build_navmesh_from_obj(const char* obj_filename, const char* output_filename,
+                           float cellSize, float cellHeight,
+                           float agentHeight, float agentRadius, float agentMaxClimb, float agentMaxSlope,
+                           int regionMinSize, int regionMergeSize,
+                           float edgeMaxLen, float edgeMaxError,
+                           int vertsPerPoly, float detailSampleDist, float detailSampleMaxError);
+
 #ifdef __cplusplus
 }
 #endif
