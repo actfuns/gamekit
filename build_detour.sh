@@ -6,6 +6,10 @@ set -e
 echo "Building RecastNavigation Library"
 echo "=================================="
 
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
 # Detect platform
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m)
@@ -34,6 +38,22 @@ PLATFORM_DIR="${OS}_${ARCH_NAME}"
 echo "Detected platform: $OS ($ARCH_NAME)"
 echo "Target directory: lib/$PLATFORM_DIR/"
 
+# Function to get number of processors (fallback if nproc not available)
+get_nproc() {
+    if command -v nproc >/dev/null 2>&1; then
+        nproc
+    else
+        # Fallback to 4 cores if nproc not available
+        echo 4
+    fi
+}
+
+# Clean up previous build
+echo "Cleaning up previous build..."
+rm -rf third_party/recastnavigation/build
+rm -rf include/recastnavigation
+rm -rf lib/$PLATFORM_DIR/detour*
+
 # Create build directory
 mkdir -p third_party/recastnavigation/build
 cd third_party/recastnavigation/build
@@ -50,7 +70,7 @@ cmake .. \
 
 # Build only the specific targets we need
 echo "Building RecastNavigation libraries..."
-make -j$(nproc) Detour DetourCrowd DetourTileCache
+make -j$(get_nproc) Detour DetourCrowd DetourTileCache
 
 # Create target directories
 mkdir -p ../../../lib/$PLATFORM_DIR
