@@ -19,12 +19,10 @@
 #include <math.h>
 #include <float.h>
 
-// Recast Navigation includes (must be outside extern "C" block)
 #include "Recast.h"
 #include "RecastAlloc.h"
 #include "RecastAssert.h"
 
-// Detour Navigation includes (must be outside extern "C" block)
 #include "DetourNavMesh.h"
 #include "DetourNavMeshBuilder.h"
 #include "DetourTileCache.h"

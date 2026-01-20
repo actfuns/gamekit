@@ -59,14 +59,17 @@ func (nmq *NavMeshQuery) FindStraightPath(startX, startY, startZ, endX, endY, en
 		return nil, ErrFailedToFindPath
 	}
 
-	// Convert C array to Go slice
+	// Convert C array to Go slice using safe approach
+	// Cast C.float pointer to Go float32 pointer first
+	goPathPtr := (*float32)(unsafe.Pointer(cPath))
+	pathFloats := (*[1 << 30]float32)(unsafe.Pointer(goPathPtr))[: result*3 : result*3]
+
+	// Convert flat slice to [][3]float32
 	path := make([][3]float32, result)
-	ptr := uintptr(unsafe.Pointer(cPath))
 	for i := 0; i < int(result); i++ {
-		path[i][0] = *(*float32)(unsafe.Pointer(ptr))
-		path[i][1] = *(*float32)(unsafe.Pointer(ptr + 4))
-		path[i][2] = *(*float32)(unsafe.Pointer(ptr + 8))
-		ptr += 12 // 3 * 4 bytes
+		path[i][0] = pathFloats[i*3]
+		path[i][1] = pathFloats[i*3+1]
+		path[i][2] = pathFloats[i*3+2]
 	}
 
 	return path, nil
@@ -95,13 +98,13 @@ func BuildNavMeshFromObj(objFilename, outputFilename string,
 	regionMinSize, regionMergeSize int,
 	edgeMaxLen, edgeMaxError float32,
 	vertsPerPoly int, detailSampleDist, detailSampleMaxError float32) error {
-	
+
 	cObjFilename := C.CString(objFilename)
 	defer C.free(unsafe.Pointer(cObjFilename))
-	
+
 	cOutputFilename := C.CString(outputFilename)
 	defer C.free(unsafe.Pointer(cOutputFilename))
-	
+
 	success := C.build_navmesh_from_obj(
 		cObjFilename, cOutputFilename,
 		C.float(cellSize), C.float(cellHeight),
@@ -109,10 +112,10 @@ func BuildNavMeshFromObj(objFilename, outputFilename string,
 		C.int(regionMinSize), C.int(regionMergeSize),
 		C.float(edgeMaxLen), C.float(edgeMaxError),
 		C.int(vertsPerPoly), C.float(detailSampleDist), C.float(detailSampleMaxError))
-	
+
 	if !success {
 		return fmt.Errorf("failed to build navigation mesh from OBJ file")
 	}
-	
+
 	return nil
 }
