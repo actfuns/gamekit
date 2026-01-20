@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"dr/navmesh"
+	"github.com/actfuns/gamekit/navmesh"
 )
 
 func main() {
