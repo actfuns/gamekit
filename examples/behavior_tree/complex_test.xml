@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root main_tree_to_execute="ComplexTree">
+    <BehaviorTree ID="ComplexTree">
+        <ReactiveSequence>
+            <AlwaysSuccess/>
+            <Fallback>
+                <AlwaysSuccess/>
+                <AlwaysSuccess/>
+            </Fallback>
+            <Inverter>
+                <AlwaysSuccess/>
+            </Inverter>
+        </ReactiveSequence>
+    </BehaviorTree>
+</root>

@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<root main_tree_to_execute="MainTree">
+    <BehaviorTree ID="MainTree">
+        <Sequence>
+            <AlwaysSuccess/>
+            <ReactiveFallback>
+                <AlwaysFailure/>
+                <AlwaysSuccess/>
+            </ReactiveFallback>
+            <Inverter>
+                <AlwaysFailure/>
+            </Inverter>
+            <ReactiveSequence>
+                <AlwaysSuccess/>
+                <AlwaysSuccess/>
+            </ReactiveSequence>
+        </Sequence>
+    </BehaviorTree>
+</root>
