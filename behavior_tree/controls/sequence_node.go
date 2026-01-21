@@ -1,53 +1,53 @@
 package controls
 
-import "github.com/actfuns/gamekit/behavior_tree"
+import "github.com/actfuns/gamekit/behavior_tree/core"
 
 // SequenceNode executes children in order until one fails or all succeed
 type SequenceNode struct {
-	behavior_tree.ControlNode
+	core.ControlNode
 	currentChildIdx int
 	skippedCount    int
 }
 
 // NewSequenceNode creates a new sequence node
-func NewSequenceNode(name string, config behavior_tree.NodeConfig) *SequenceNode {
+func NewSequenceNode(name string, config core.NodeConfig) *SequenceNode {
 	return &SequenceNode{
-		ControlNode:     *behavior_tree.NewControlNode(name, config),
+		ControlNode:     core.NewControlNode(name, config),
 		currentChildIdx: 0,
 		skippedCount:    0,
 	}
 }
 
 // Tick executes the sequence logic
-func (sn *SequenceNode) Tick() behavior_tree.NodeStatus {
+func (sn *SequenceNode) Tick() core.NodeStatus {
 	children := sn.Children()
 	childrenCount := len(children)
 
-	if !behavior_tree.IsStatusActive(sn.Status()) {
+	if !core.IsStatusActive(sn.Status()) {
 		sn.skippedCount = 0
 	}
 
-	sn.SetStatus(behavior_tree.NodeStatusRunning)
+	sn.SetStatus(core.NodeStatusRunning)
 
 	for sn.currentChildIdx < childrenCount {
 		currentChild := children[sn.currentChildIdx]
 		childStatus := currentChild.Tick()
 
 		switch childStatus {
-		case behavior_tree.NodeStatusRunning:
+		case core.NodeStatusRunning:
 			return childStatus
-		case behavior_tree.NodeStatusFailure:
+		case core.NodeStatusFailure:
 			sn.ResetChildren()
 			sn.currentChildIdx = 0
 			return childStatus
-		case behavior_tree.NodeStatusSuccess:
+		case core.NodeStatusSuccess:
 			sn.currentChildIdx++
-		case behavior_tree.NodeStatusSkipped:
+		case core.NodeStatusSkipped:
 			sn.currentChildIdx++
 			sn.skippedCount++
-		case behavior_tree.NodeStatusIdle:
+		case core.NodeStatusIdle:
 			// This should not happen in normal operation
-			return behavior_tree.NodeStatusFailure
+			return core.NodeStatusFailure
 		}
 	}
 
@@ -60,9 +60,9 @@ func (sn *SequenceNode) Tick() behavior_tree.NodeStatus {
 	}
 
 	if allChildrenSkipped {
-		return behavior_tree.NodeStatusSkipped
+		return core.NodeStatusSkipped
 	}
-	return behavior_tree.NodeStatusSuccess
+	return core.NodeStatusSuccess
 }
 
 // Halt handles halting the sequence node

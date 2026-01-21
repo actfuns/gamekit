@@ -1,12 +1,10 @@
 package controls
 
-import (
-	"github.com/actfuns/gamekit/behavior_tree"
-)
+import "github.com/actfuns/gamekit/behavior_tree/core"
 
 // ParallelNode executes all children in parallel until thresholds are reached
 type ParallelNode struct {
-	behavior_tree.ControlNode
+	core.ControlNode
 	successThreshold int
 	failureThreshold int
 	activeChildren   []bool
@@ -14,9 +12,9 @@ type ParallelNode struct {
 }
 
 // NewParallelNode creates a new parallel node with thresholds
-func NewParallelNode(name string, config behavior_tree.NodeConfig, successThreshold, failureThreshold int) *ParallelNode {
+func NewParallelNode(name string, config core.NodeConfig, successThreshold, failureThreshold int) *ParallelNode {
 	return &ParallelNode{
-		ControlNode:      *behavior_tree.NewControlNode(name, config),
+		ControlNode:      core.NewControlNode(name, config),
 		successThreshold: successThreshold,
 		failureThreshold: failureThreshold,
 		activeChildren:   make([]bool, 0),
@@ -25,10 +23,10 @@ func NewParallelNode(name string, config behavior_tree.NodeConfig, successThresh
 }
 
 // Tick executes the parallel logic
-func (node *ParallelNode) Tick() behavior_tree.NodeStatus {
+func (node *ParallelNode) Tick() core.NodeStatus {
 	children := node.Children()
 	if len(children) == 0 {
-		return behavior_tree.NodeStatusSuccess
+		return core.NodeStatusSuccess
 	}
 
 	// Initialize active children slice if needed
@@ -56,15 +54,15 @@ func (node *ParallelNode) Tick() behavior_tree.NodeStatus {
 
 		status := child.ExecuteTick()
 		switch status {
-		case behavior_tree.NodeStatusSuccess:
+		case core.NodeStatusSuccess:
 			node.completedList[i] = true
 			node.activeChildren[i] = false
 			successCount++
-		case behavior_tree.NodeStatusFailure:
+		case core.NodeStatusFailure:
 			node.completedList[i] = true
 			node.activeChildren[i] = false
 			failureCount++
-		case behavior_tree.NodeStatusRunning:
+		case core.NodeStatusRunning:
 			runningCount++
 		}
 	}
@@ -76,7 +74,7 @@ func (node *ParallelNode) Tick() behavior_tree.NodeStatus {
 			child.HaltAndReset()
 		}
 		node.resetState()
-		return behavior_tree.NodeStatusSuccess
+		return core.NodeStatusSuccess
 	}
 
 	if failureCount >= node.failureThreshold {
@@ -85,11 +83,11 @@ func (node *ParallelNode) Tick() behavior_tree.NodeStatus {
 			child.HaltAndReset()
 		}
 		node.resetState()
-		return behavior_tree.NodeStatusFailure
+		return core.NodeStatusFailure
 	}
 
 	// Still running
-	return behavior_tree.NodeStatusRunning
+	return core.NodeStatusRunning
 }
 
 // resetState resets the internal state for next execution

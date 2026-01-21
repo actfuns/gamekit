@@ -1,35 +1,35 @@
 package decorators
 
-import "github.com/actfuns/gamekit/behavior_tree"
+import "github.com/actfuns/gamekit/behavior_tree/core"
 
 // ForceSuccessNode always returns SUCCESS when the child completes,
 // regardless of whether the child returned SUCCESS or FAILURE.
 // - If the child returns RUNNING, this node returns RUNNING.
 // - If the child returns SUCCESS or FAILURE, this node returns SUCCESS.
 type ForceSuccessNode struct {
-	behavior_tree.DecoratorNode
+	core.DecoratorNode
 }
 
 // NewForceSuccessNode creates a new ForceSuccessNode
-func NewForceSuccessNode(name string, config behavior_tree.NodeConfig) *ForceSuccessNode {
+func NewForceSuccessNode(name string, config core.NodeConfig) *ForceSuccessNode {
 	return &ForceSuccessNode{
-		DecoratorNode: *behavior_tree.NewDecoratorNode(name, config),
+		DecoratorNode: core.NewDecoratorNode(name, config),
 	}
 }
 
 // Tick executes the force success logic
-func (fsn *ForceSuccessNode) Tick() behavior_tree.NodeStatus {
+func (fsn *ForceSuccessNode) Tick() core.NodeStatus {
 	children := fsn.Children()
 	if len(children) == 0 {
-		return behavior_tree.NodeStatusFailure
+		return core.NodeStatusFailure
 	}
 
 	child := children[0]
 	status := child.Tick()
 
-	if behavior_tree.IsStatusCompleted(status) {
+	if core.IsStatusCompleted(status) {
 		child.HaltAndReset()
-		return behavior_tree.NodeStatusSuccess
+		return core.NodeStatusSuccess
 	}
 
 	// RUNNING or skipping
@@ -41,29 +41,29 @@ func (fsn *ForceSuccessNode) Tick() behavior_tree.NodeStatus {
 // - If the child returns RUNNING, this node returns RUNNING.
 // - If the child returns SUCCESS or FAILURE, this node returns FAILURE.
 type ForceFailureNode struct {
-	behavior_tree.DecoratorNode
+	core.DecoratorNode
 }
 
 // NewForceFailureNode creates a new ForceFailureNode
-func NewForceFailureNode(name string, config behavior_tree.NodeConfig) *ForceFailureNode {
+func NewForceFailureNode(name string, config core.NodeConfig) *ForceFailureNode {
 	return &ForceFailureNode{
-		DecoratorNode: *behavior_tree.NewDecoratorNode(name, config),
+		DecoratorNode: core.NewDecoratorNode(name, config),
 	}
 }
 
 // Tick executes the force failure logic
-func (ffn *ForceFailureNode) Tick() behavior_tree.NodeStatus {
+func (ffn *ForceFailureNode) Tick() core.NodeStatus {
 	children := ffn.Children()
 	if len(children) == 0 {
-		return behavior_tree.NodeStatusFailure
+		return core.NodeStatusFailure
 	}
 
 	child := children[0]
 	status := child.Tick()
 
-	if behavior_tree.IsStatusCompleted(status) {
+	if core.IsStatusCompleted(status) {
 		child.HaltAndReset()
-		return behavior_tree.NodeStatusFailure
+		return core.NodeStatusFailure
 	}
 
 	// RUNNING or skipping

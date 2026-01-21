@@ -1,18 +1,18 @@
 package decorators
 
-import "github.com/actfuns/gamekit/behavior_tree"
+import "github.com/actfuns/gamekit/behavior_tree/core"
 
 // EntryUpdatedDecorator executes its child only when the specified blackboard entry is updated.
 type EntryUpdatedDecorator struct {
-	behavior_tree.DecoratorNode
-	entryKey           string
-	sequenceId         uint64
+	core.DecoratorNode
+	entryKey            string
+	sequenceId          uint64
 	stillExecutingChild bool
-	ifNotUpdated       behavior_tree.NodeStatus
+	ifNotUpdated        core.NodeStatus
 }
 
 // NewEntryUpdatedDecorator creates a new EntryUpdatedDecorator
-func NewEntryUpdatedDecorator(name string, config behavior_tree.NodeConfig, ifNotUpdated behavior_tree.NodeStatus) *EntryUpdatedDecorator {
+func NewEntryUpdatedDecorator(name string, config core.NodeConfig, ifNotUpdated core.NodeStatus) *EntryUpdatedDecorator {
 	// Get the entry port
 	entryPort, exists := config.InputPorts["entry"]
 	if !exists || entryPort == "" {
@@ -26,7 +26,7 @@ func NewEntryUpdatedDecorator(name string, config behavior_tree.NodeConfig, ifNo
 	}
 
 	return &EntryUpdatedDecorator{
-		DecoratorNode:       *behavior_tree.NewDecoratorNode(name, config),
+		DecoratorNode:       core.NewDecoratorNode(name, config),
 		entryKey:            entryKey,
 		sequenceId:          0,
 		stillExecutingChild: false,
@@ -35,18 +35,18 @@ func NewEntryUpdatedDecorator(name string, config behavior_tree.NodeConfig, ifNo
 }
 
 // Tick executes the updated decorator logic
-func (eud *EntryUpdatedDecorator) Tick() behavior_tree.NodeStatus {
+func (eud *EntryUpdatedDecorator) Tick() core.NodeStatus {
 	// Continue executing an asynchronous child
 	if eud.stillExecutingChild {
 		children := eud.Children()
 		if len(children) == 0 {
 			eud.stillExecutingChild = false
-			return behavior_tree.NodeStatusFailure
+			return core.NodeStatusFailure
 		}
 
 		child := children[0]
 		status := child.Tick()
-		eud.stillExecutingChild = (status == behavior_tree.NodeStatusRunning)
+		eud.stillExecutingChild = (status == core.NodeStatusRunning)
 		return status
 	}
 
@@ -75,12 +75,12 @@ func (eud *EntryUpdatedDecorator) Tick() behavior_tree.NodeStatus {
 	// Execute child since entry was updated
 	children := eud.Children()
 	if len(children) == 0 {
-		return behavior_tree.NodeStatusFailure
+		return core.NodeStatusFailure
 	}
 
 	child := children[0]
 	status := child.Tick()
-	eud.stillExecutingChild = (status == behavior_tree.NodeStatusRunning)
+	eud.stillExecutingChild = (status == core.NodeStatusRunning)
 	return status
 }
 

@@ -1,14 +1,14 @@
-package behavior_tree
+package core
 
 // ActionNodeBase is the base class for all action nodes
 type ActionNodeBase struct {
-	TreeNodeBase
+	TreeNode
 }
 
 // NewActionNodeBase creates a new action node base
-func NewActionNodeBase(name string, config NodeConfig) *ActionNodeBase {
-	return &ActionNodeBase{
-		TreeNodeBase: *NewTreeNode(name, config),
+func NewActionNodeBase(name string, config NodeConfig) ActionNodeBase {
+	return ActionNodeBase{
+		TreeNode: NewTreeNode(name, config),
 	}
 }
 
@@ -24,9 +24,9 @@ type ActionNode struct {
 }
 
 // NewActionNode creates a new action node with a tick function
-func NewActionNode(name string, config NodeConfig, tickFunc func() NodeStatus) *ActionNode {
-	return &ActionNode{
-		ActionNodeBase: *NewActionNodeBase(name, config),
+func NewActionNode(name string, config NodeConfig, tickFunc func() NodeStatus) ActionNode {
+	return ActionNode{
+		ActionNodeBase: NewActionNodeBase(name, config),
 		tickFunc:       tickFunc,
 	}
 }
@@ -46,9 +46,9 @@ type AsyncActionNode struct {
 }
 
 // NewAsyncActionNode creates a new async action node
-func NewAsyncActionNode(name string, config NodeConfig, tickFunc func() NodeStatus) *AsyncActionNode {
-	return &AsyncActionNode{
-		ActionNodeBase: *NewActionNodeBase(name, config),
+func NewAsyncActionNode(name string, config NodeConfig, tickFunc func() NodeStatus) AsyncActionNode {
+	return AsyncActionNode{
+		ActionNodeBase: NewActionNodeBase(name, config),
 		tickFunc:       tickFunc,
 	}
 }
@@ -73,9 +73,9 @@ type StatefulActionNode struct {
 func NewStatefulActionNode(name string, config NodeConfig,
 	startFunc func() NodeStatus,
 	runningFunc func() NodeStatus,
-	haltedFunc func()) *StatefulActionNode {
-	return &StatefulActionNode{
-		ActionNodeBase: *NewActionNodeBase(name, config),
+	haltedFunc func()) StatefulActionNode {
+	return StatefulActionNode{
+		ActionNodeBase: NewActionNodeBase(name, config),
 		onStartFunc:    startFunc,
 		onRunningFunc:  runningFunc,
 		onHaltedFunc:   haltedFunc,

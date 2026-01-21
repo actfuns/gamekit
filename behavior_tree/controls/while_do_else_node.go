@@ -1,47 +1,47 @@
 package controls
 
-import "github.com/actfuns/gamekit/behavior_tree"
+import "github.com/actfuns/gamekit/behavior_tree/core"
 
 // WhileDoElseNode executes a condition and loops while it's true, with an else branch
 type WhileDoElseNode struct {
-	behavior_tree.ControlNode
-	whileStatus behavior_tree.NodeStatus
+	core.ControlNode
+	whileStatus core.NodeStatus
 }
 
 // NewWhileDoElseNode creates a new while-do-else node
-func NewWhileDoElseNode(name string, config behavior_tree.NodeConfig) *WhileDoElseNode {
+func NewWhileDoElseNode(name string, config core.NodeConfig) *WhileDoElseNode {
 	node := &WhileDoElseNode{
-		ControlNode: *behavior_tree.NewControlNode(name, config),
-		whileStatus: behavior_tree.NodeStatusIdle,
+		ControlNode: core.NewControlNode(name, config),
+		whileStatus: core.NodeStatusIdle,
 	}
 	return node
 }
 
 // Tick executes the while-do-else logic
-func (node *WhileDoElseNode) Tick() behavior_tree.NodeStatus {
+func (node *WhileDoElseNode) Tick() core.NodeStatus {
 	children := node.Children()
 	if len(children) < 2 || len(children) > 3 {
-		return behavior_tree.NodeStatusFailure
+		return core.NodeStatusFailure
 	}
 
 	condition := children[0]
 	thenBranch := children[1]
-	var elseBranch behavior_tree.TreeNode = nil
+	var elseBranch core.TreeNode = nil
 	if len(children) == 3 {
 		elseBranch = children[2]
 	}
 
 	// Execute condition
 	conditionStatus := condition.ExecuteTick()
-	if conditionStatus == behavior_tree.NodeStatusRunning {
-		return behavior_tree.NodeStatusRunning
+	if conditionStatus == core.NodeStatusRunning {
+		return core.NodeStatusRunning
 	}
 
-	if conditionStatus == behavior_tree.NodeStatusSuccess {
+	if conditionStatus == core.NodeStatusSuccess {
 		// Condition succeeded, execute then branch
 		thenStatus := thenBranch.ExecuteTick()
-		if thenStatus == behavior_tree.NodeStatusRunning {
-			return behavior_tree.NodeStatusRunning
+		if thenStatus == core.NodeStatusRunning {
+			return core.NodeStatusRunning
 		}
 		// Halt else branch if it exists
 		if elseBranch != nil {
@@ -52,8 +52,8 @@ func (node *WhileDoElseNode) Tick() behavior_tree.NodeStatus {
 		// Condition failed, execute else branch if it exists
 		if elseBranch != nil {
 			elseStatus := elseBranch.ExecuteTick()
-			if elseStatus == behavior_tree.NodeStatusRunning {
-				return behavior_tree.NodeStatusRunning
+			if elseStatus == core.NodeStatusRunning {
+				return core.NodeStatusRunning
 			}
 			// Halt then branch
 			thenBranch.HaltAndReset()
@@ -61,7 +61,7 @@ func (node *WhileDoElseNode) Tick() behavior_tree.NodeStatus {
 		} else {
 			// No else branch, just return failure
 			thenBranch.HaltAndReset()
-			return behavior_tree.NodeStatusFailure
+			return core.NodeStatusFailure
 		}
 	}
 }
@@ -71,6 +71,6 @@ func (node *WhileDoElseNode) Halt() {
 	for _, child := range node.Children() {
 		child.HaltAndReset()
 	}
-	node.whileStatus = behavior_tree.NodeStatusIdle
+	node.whileStatus = core.NodeStatusIdle
 	node.ControlNode.Halt()
 }

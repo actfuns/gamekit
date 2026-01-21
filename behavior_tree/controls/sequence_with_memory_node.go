@@ -1,27 +1,27 @@
 package controls
 
-import "github.com/actfuns/gamekit/behavior_tree"
+import "github.com/actfuns/gamekit/behavior_tree/core"
 
 // SequenceWithMemoryNode executes children in sequence, remembering the last running child
 type SequenceWithMemoryNode struct {
-	behavior_tree.ControlNode
+	core.ControlNode
 	currentChild int
 }
 
 // NewSequenceWithMemoryNode creates a new sequence with memory node
-func NewSequenceWithMemoryNode(name string, config behavior_tree.NodeConfig) *SequenceWithMemoryNode {
+func NewSequenceWithMemoryNode(name string, config core.NodeConfig) *SequenceWithMemoryNode {
 	node := &SequenceWithMemoryNode{
-		ControlNode:  *behavior_tree.NewControlNode(name, config),
+		ControlNode:  core.NewControlNode(name, config),
 		currentChild: 0,
 	}
 	return node
 }
 
 // Tick executes the sequence with memory logic
-func (node *SequenceWithMemoryNode) Tick() behavior_tree.NodeStatus {
+func (node *SequenceWithMemoryNode) Tick() core.NodeStatus {
 	children := node.Children()
 	if len(children) == 0 {
-		return behavior_tree.NodeStatusSuccess
+		return core.NodeStatusSuccess
 	}
 
 	// Start from the current child
@@ -30,16 +30,16 @@ func (node *SequenceWithMemoryNode) Tick() behavior_tree.NodeStatus {
 		status := child.ExecuteTick()
 
 		switch status {
-		case behavior_tree.NodeStatusRunning:
+		case core.NodeStatusRunning:
 			// Remember the current child for next tick
 			node.currentChild = i
-			return behavior_tree.NodeStatusRunning
-		case behavior_tree.NodeStatusFailure:
+			return core.NodeStatusRunning
+		case core.NodeStatusFailure:
 			// Sequence failed, reset current child and halt all children
 			node.currentChild = 0
 			node.ResetChildren()
-			return behavior_tree.NodeStatusFailure
-		case behavior_tree.NodeStatusSuccess:
+			return core.NodeStatusFailure
+		case core.NodeStatusSuccess:
 			// Continue to next child
 			continue
 		}
@@ -47,7 +47,7 @@ func (node *SequenceWithMemoryNode) Tick() behavior_tree.NodeStatus {
 
 	// All children succeeded
 	node.currentChild = 0
-	return behavior_tree.NodeStatusSuccess
+	return core.NodeStatusSuccess
 }
 
 // Halt stops execution and resets the node

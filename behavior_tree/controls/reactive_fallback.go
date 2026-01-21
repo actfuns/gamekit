@@ -1,32 +1,32 @@
 package controls
 
-import "github.com/actfuns/gamekit/behavior_tree"
+import "github.com/actfuns/gamekit/behavior_tree/core"
 
 // ReactiveFallback 反应式回退节点
 type ReactiveFallback struct {
-	behavior_tree.ControlNode
+	core.ControlNode
 }
 
 // NewReactiveFallback 创建新的ReactiveFallback实例
-func NewReactiveFallback(name string, config behavior_tree.NodeConfig) *ReactiveFallback {
+func NewReactiveFallback(name string, config core.NodeConfig) *ReactiveFallback {
 	node := &ReactiveFallback{}
-	node.ControlNode = *behavior_tree.NewControlNode(name, config)
+	node.ControlNode = core.NewControlNode(name, config)
 	return node
 }
 
 // Tick 执行节点逻辑
-func (rf *ReactiveFallback) Tick() behavior_tree.NodeStatus {
+func (rf *ReactiveFallback) Tick() core.NodeStatus {
 	children := rf.Children()
 	if len(children) == 0 {
-		return behavior_tree.NodeStatusSuccess
+		return core.NodeStatusSuccess
 	}
 
 	for _, child := range children {
 		status := child.Tick()
-		if status != behavior_tree.NodeStatusFailure {
+		if status != core.NodeStatusFailure {
 			return status
 		}
 	}
 
-	return behavior_tree.NodeStatusFailure
+	return core.NodeStatusFailure
 }

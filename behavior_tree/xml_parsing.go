@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"strings"
+
+	"github.com/actfuns/gamekit/behavior_tree/core"
 )
 
 // XMLParser is used to parse behavior tree XML files
@@ -78,7 +80,7 @@ func (p *XMLParser) LoadFromFile(filename string) (*BehaviorTree, error) {
 }
 
 // parseNode recursively parses a node from XML
-func (p *XMLParser) parseNode(nodeXML NodeXML, blackboard *Blackboard) (TreeNode, error) {
+func (p *XMLParser) parseNode(nodeXML NodeXML, blackboard *core.Blackboard) (core.TreeNode, error) {
 	nodeName := nodeXML.XMLName.Local
 
 	// Extract attributes

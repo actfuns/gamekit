@@ -1,4 +1,4 @@
-package behavior_tree
+package core
 
 import (
 	"reflect"
@@ -42,11 +42,10 @@ type TypeInfo struct {
 
 // Blackboard is used by BehaviorTrees to exchange typed data
 type Blackboard struct {
-	entries    map[string]Entry
-	parent     *Blackboard
-	mutex      sync.RWMutex
-	factory    *BehaviorTreeFactory
-	portInfo   map[string]PortInfo
+	entries  map[string]Entry
+	parent   *Blackboard
+	mutex    sync.RWMutex
+	portInfo map[string]PortInfo
 }
 
 // NewBlackboard creates a new blackboard

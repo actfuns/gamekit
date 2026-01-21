@@ -1,26 +1,26 @@
 package controls
 
-import "github.com/actfuns/gamekit/behavior_tree"
+import "github.com/actfuns/gamekit/behavior_tree/core"
 
 // IfThenElseNode is a control node that executes the first child as condition,
 // then executes the second child if condition succeeds, or the third child if condition fails
 type IfThenElseNode struct {
-	behavior_tree.ControlNode
+	core.ControlNode
 }
 
 // NewIfThenElseNode creates a new if-then-else node
-func NewIfThenElseNode(name string, config behavior_tree.NodeConfig) *IfThenElseNode {
+func NewIfThenElseNode(name string, config core.NodeConfig) *IfThenElseNode {
 	node := &IfThenElseNode{
-		ControlNode: *behavior_tree.NewControlNode(name, config),
+		ControlNode: core.NewControlNode(name, config),
 	}
 	return node
 }
 
 // Tick executes the if-then-else logic
-func (node *IfThenElseNode) Tick() behavior_tree.NodeStatus {
+func (node *IfThenElseNode) Tick() core.NodeStatus {
 	children := node.Children()
 	if len(children) != 3 {
-		return behavior_tree.NodeStatusFailure
+		return core.NodeStatusFailure
 	}
 
 	condition := children[0]
@@ -29,15 +29,15 @@ func (node *IfThenElseNode) Tick() behavior_tree.NodeStatus {
 
 	// Execute condition
 	conditionStatus := condition.ExecuteTick()
-	if conditionStatus == behavior_tree.NodeStatusRunning {
-		return behavior_tree.NodeStatusRunning
+	if conditionStatus == core.NodeStatusRunning {
+		return core.NodeStatusRunning
 	}
 
-	if conditionStatus == behavior_tree.NodeStatusSuccess {
+	if conditionStatus == core.NodeStatusSuccess {
 		// Condition succeeded, execute then branch
 		thenStatus := thenBranch.ExecuteTick()
-		if thenStatus == behavior_tree.NodeStatusRunning {
-			return behavior_tree.NodeStatusRunning
+		if thenStatus == core.NodeStatusRunning {
+			return core.NodeStatusRunning
 		}
 		// Halt else branch since we're not using it
 		elseBranch.HaltAndReset()
@@ -45,8 +45,8 @@ func (node *IfThenElseNode) Tick() behavior_tree.NodeStatus {
 	} else {
 		// Condition failed, execute else branch
 		elseStatus := elseBranch.ExecuteTick()
-		if elseStatus == behavior_tree.NodeStatusRunning {
-			return behavior_tree.NodeStatusRunning
+		if elseStatus == core.NodeStatusRunning {
+			return core.NodeStatusRunning
 		}
 		// Halt then branch since we're not using it
 		thenBranch.HaltAndReset()

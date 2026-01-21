@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/actfuns/gamekit/behavior_tree"
+	"github.com/actfuns/gamekit/behavior_tree/core"
 )
 
 const (
@@ -15,7 +15,7 @@ const (
 // RetryNode retries its child until it succeeds or reaches the maximum number of attempts.
 // If max_attempts is -1, it retries indefinitely until success.
 type RetryNode struct {
-	behavior_tree.DecoratorNode
+	core.DecoratorNode
 	maxAttempts   int
 	tryCount      int
 	readFromPorts bool
@@ -24,12 +24,12 @@ type RetryNode struct {
 // NewRetryNode creates a new RetryNode with either direct parameter or from config
 // If maxAttempts is provided, use it directly (code usage)
 // If no maxAttempts provided, read from ports (XML usage)
-func NewRetryNode(name string, config behavior_tree.NodeConfig, maxAttempts ...int) *RetryNode {
+func NewRetryNode(name string, config core.NodeConfig, maxAttempts ...int) *RetryNode {
 	retryNode := &RetryNode{
-		DecoratorNode: *behavior_tree.NewDecoratorNode(name, config),
+		DecoratorNode: core.NewDecoratorNode(name, config),
 		tryCount:      0,
 	}
-	
+
 	if len(maxAttempts) > 0 {
 		// Direct parameter provided (for code usage)
 		retryNode.maxAttempts = maxAttempts[0]
@@ -38,19 +38,19 @@ func NewRetryNode(name string, config behavior_tree.NodeConfig, maxAttempts ...i
 		// Read from ports (for XML usage)
 		retryNode.maxAttempts = -1 // default to infinite
 		retryNode.readFromPorts = true
-		
+
 		if numAttemptsStr, ok := config.InputPorts[RetryNumAttempts]; ok {
 			if numAttempts, err := strconv.Atoi(numAttemptsStr); err == nil {
 				retryNode.maxAttempts = numAttempts
 			}
 		}
 	}
-	
+
 	return retryNode
 }
 
 // Tick executes the retry logic
-func (rn *RetryNode) Tick() behavior_tree.NodeStatus {
+func (rn *RetryNode) Tick() core.NodeStatus {
 	if rn.readFromPorts {
 		if value, ok := rn.GetInput(RetryNumAttempts); ok {
 			if intValue, err := strconv.Atoi(value); err == nil {
@@ -65,7 +65,7 @@ func (rn *RetryNode) Tick() behavior_tree.NodeStatus {
 
 	children := rn.Children()
 	if len(children) == 0 {
-		return behavior_tree.NodeStatusFailure
+		return core.NodeStatusFailure
 	}
 
 	child := children[0]
@@ -76,12 +76,12 @@ func (rn *RetryNode) Tick() behavior_tree.NodeStatus {
 		status := child.Tick()
 
 		switch status {
-		case behavior_tree.NodeStatusSuccess:
+		case core.NodeStatusSuccess:
 			rn.tryCount = 0
 			child.HaltAndReset()
-			return behavior_tree.NodeStatusSuccess
+			return core.NodeStatusSuccess
 
-		case behavior_tree.NodeStatusFailure:
+		case core.NodeStatusFailure:
 			rn.tryCount++
 			// Refresh maxAttempts in case it changed in one of the child nodes
 			if rn.readFromPorts {
@@ -95,25 +95,25 @@ func (rn *RetryNode) Tick() behavior_tree.NodeStatus {
 			child.HaltAndReset()
 
 			// For async children, return RUNNING to make it interruptible
-			if child.RequiresWakeUp() && prevStatus == behavior_tree.NodeStatusIdle && doLoop {
+			if child.RequiresWakeUp() && prevStatus == core.NodeStatusIdle && doLoop {
 				rn.EmitWakeUpSignal()
-				return behavior_tree.NodeStatusRunning
+				return core.NodeStatusRunning
 			}
 
-		case behavior_tree.NodeStatusRunning:
-			return behavior_tree.NodeStatusRunning
+		case core.NodeStatusRunning:
+			return core.NodeStatusRunning
 
-		case behavior_tree.NodeStatusSkipped:
+		case core.NodeStatusSkipped:
 			child.HaltAndReset()
-			return behavior_tree.NodeStatusSkipped
+			return core.NodeStatusSkipped
 
-		case behavior_tree.NodeStatusIdle:
+		case core.NodeStatusIdle:
 			panic("[" + rn.Name() + "]: A child should not return IDLE")
 		}
 	}
 
 	rn.tryCount = 0
-	return behavior_tree.NodeStatusFailure
+	return core.NodeStatusFailure
 }
 
 // Halt handles halting the retry node

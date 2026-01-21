@@ -1,4 +1,4 @@
-package behavior_tree
+package core
 
 import (
 	"fmt"
@@ -130,9 +130,9 @@ type AnyTypeAllowed struct{}
 
 // PortInfo represents information about a port
 type PortInfo struct {
-	Direction   PortDirection
-	TypeName    string
-	Description string
+	Direction    PortDirection
+	TypeName     string
+	Description  string
 	DefaultValue string
 }
 
@@ -158,7 +158,7 @@ const (
 	PreCondCount
 )
 
-// PostCond defines post-condition types  
+// PostCond defines post-condition types
 type PostCond int
 
 const (
@@ -200,3 +200,21 @@ type PortsRemapping map[string]string
 // NonPortAttributes maps attribute names to their values
 type NonPortAttributes map[string]string
 
+// Node represents a node in the behavior tree
+type Node interface {
+	Name() string
+	Status() NodeStatus
+	SetStatus(NodeStatus)
+	Config() NodeConfig
+	Blackboard() *Blackboard
+	AddChild(Node)
+	Children() []Node
+	SetParent(*Node)
+	Parent() *Node
+	Tick() NodeStatus
+	ExecuteTick() NodeStatus
+	Halt()
+	HaltAndReset()
+	RequiresWakeUp() bool
+	EmitWakeUpSignal()
+}

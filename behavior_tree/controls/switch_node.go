@@ -3,29 +3,29 @@ package controls
 import (
 	"fmt"
 
-	"github.com/actfuns/gamekit/behavior_tree"
+	"github.com/actfuns/gamekit/behavior_tree/core"
 )
 
 // SwitchNode executes a specific child based on a switch value
 type SwitchNode struct {
-	behavior_tree.ControlNode
+	core.ControlNode
 	runningChildIdx int
 }
 
 // NewSwitchNode creates a new switch node
-func NewSwitchNode(name string, config behavior_tree.NodeConfig) *SwitchNode {
+func NewSwitchNode(name string, config core.NodeConfig) *SwitchNode {
 	node := &SwitchNode{
-		ControlNode:     *behavior_tree.NewControlNode(name, config),
+		ControlNode:     core.NewControlNode(name, config),
 		runningChildIdx: -1,
 	}
 	return node
 }
 
 // Tick executes the switch logic
-func (node *SwitchNode) Tick() behavior_tree.NodeStatus {
+func (node *SwitchNode) Tick() core.NodeStatus {
 	children := node.Children()
 	if len(children) == 0 {
-		return behavior_tree.NodeStatusSuccess
+		return core.NodeStatusSuccess
 	}
 
 	// Get the switch value from input
@@ -54,7 +54,7 @@ func (node *SwitchNode) Tick() behavior_tree.NodeStatus {
 		if node.runningChildIdx == selectedIndex {
 			// Continue executing the same child
 			status := children[selectedIndex].ExecuteTick()
-			if status != behavior_tree.NodeStatusRunning {
+			if status != core.NodeStatusRunning {
 				node.runningChildIdx = -1
 			}
 			return status
@@ -67,7 +67,7 @@ func (node *SwitchNode) Tick() behavior_tree.NodeStatus {
 
 	// Execute the selected child
 	status := children[selectedIndex].ExecuteTick()
-	if status == behavior_tree.NodeStatusRunning {
+	if status == core.NodeStatusRunning {
 		node.runningChildIdx = selectedIndex
 	}
 	return status

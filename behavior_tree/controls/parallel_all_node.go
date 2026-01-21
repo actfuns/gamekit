@@ -4,20 +4,20 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/actfuns/gamekit/behavior_tree"
+	"github.com/actfuns/gamekit/behavior_tree/core"
 )
 
 // ParallelAllNode executes all children in parallel and succeeds only when all succeed
 type ParallelAllNode struct {
-	behavior_tree.ControlNode
+	core.ControlNode
 	failureThreshold int
 	completedList    map[int]bool
 }
 
 // NewParallelAllNode creates a new parallel all node
-func NewParallelAllNode(name string, config behavior_tree.NodeConfig) *ParallelAllNode {
+func NewParallelAllNode(name string, config core.NodeConfig) *ParallelAllNode {
 	node := &ParallelAllNode{
-		ControlNode:      *behavior_tree.NewControlNode(name, config),
+		ControlNode:      core.NewControlNode(name, config),
 		failureThreshold: 1,
 		completedList:    make(map[int]bool),
 	}
@@ -30,10 +30,10 @@ func (node *ParallelAllNode) SetFailureThreshold(threshold int) {
 }
 
 // Tick executes the parallel all logic
-func (node *ParallelAllNode) Tick() behavior_tree.NodeStatus {
+func (node *ParallelAllNode) Tick() core.NodeStatus {
 	children := node.Children()
 	if len(children) == 0 {
-		return behavior_tree.NodeStatusSuccess
+		return core.NodeStatusSuccess
 	}
 
 	// Get max_failures parameter
@@ -68,9 +68,9 @@ func (node *ParallelAllNode) Tick() behavior_tree.NodeStatus {
 			// Child already completed, check its status
 			childStatus := child.Status()
 			switch childStatus {
-			case behavior_tree.NodeStatusSuccess:
+			case core.NodeStatusSuccess:
 				successCount++
-			case behavior_tree.NodeStatusFailure:
+			case core.NodeStatusFailure:
 				failureCount++
 			}
 			continue
@@ -79,13 +79,13 @@ func (node *ParallelAllNode) Tick() behavior_tree.NodeStatus {
 		// Execute child
 		status := child.ExecuteTick()
 		switch status {
-		case behavior_tree.NodeStatusSuccess:
+		case core.NodeStatusSuccess:
 			node.completedList[i] = true
 			successCount++
-		case behavior_tree.NodeStatusFailure:
+		case core.NodeStatusFailure:
 			node.completedList[i] = true
 			failureCount++
-		case behavior_tree.NodeStatusRunning:
+		case core.NodeStatusRunning:
 			runningCount++
 		}
 	}
@@ -97,17 +97,17 @@ func (node *ParallelAllNode) Tick() behavior_tree.NodeStatus {
 			child.HaltAndReset()
 		}
 		node.completedList = make(map[int]bool) // Reset for next execution
-		return behavior_tree.NodeStatusFailure
+		return core.NodeStatusFailure
 	}
 
 	if successCount == len(children) {
 		// All children succeeded
 		node.completedList = make(map[int]bool) // Reset for next execution
-		return behavior_tree.NodeStatusSuccess
+		return core.NodeStatusSuccess
 	}
 
 	// Still running
-	return behavior_tree.NodeStatusRunning
+	return core.NodeStatusRunning
 }
 
 // Halt stops execution and resets the node

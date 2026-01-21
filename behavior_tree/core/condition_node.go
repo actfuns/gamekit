@@ -1,16 +1,16 @@
-package behavior_tree
+package core
 
 // ConditionNode is the base class for all condition nodes
 type ConditionNode struct {
-	TreeNodeBase
+	TreeNode
 	tickFunc func() NodeStatus
 }
 
 // NewConditionNode creates a new condition node
-func NewConditionNode(name string, config NodeConfig, tickFunc func() NodeStatus) *ConditionNode {
-	return &ConditionNode{
-		TreeNodeBase: *NewTreeNode(name, config),
-		tickFunc:     tickFunc,
+func NewConditionNode(name string, config NodeConfig, tickFunc func() NodeStatus) ConditionNode {
+	return ConditionNode{
+		TreeNode: NewTreeNode(name, config),
+		tickFunc: tickFunc,
 	}
 }
 
@@ -41,7 +41,7 @@ func NewStatefulConditionNode(name string, config NodeConfig,
 	runningFunc func() NodeStatus,
 	haltedFunc func()) *StatefulConditionNode {
 	return &StatefulConditionNode{
-		ConditionNode: *NewConditionNode(name, config, nil),
+		ConditionNode: NewConditionNode(name, config, nil),
 		onStartFunc:   startFunc,
 		onRunningFunc: runningFunc,
 		onHaltedFunc:  haltedFunc,

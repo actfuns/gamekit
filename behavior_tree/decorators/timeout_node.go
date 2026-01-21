@@ -6,44 +6,44 @@ import (
 	"sync"
 	"time"
 
-	"github.com/actfuns/gamekit/behavior_tree"
+	"github.com/actfuns/gamekit/behavior_tree/core"
 )
 
 // TimeoutNode adds a timeout to its child execution.
 // If the child doesn't complete within the specified time, it returns FAILURE.
 type TimeoutNode struct {
-	behavior_tree.DecoratorNode
-	msec            uint
-	timeoutStarted  bool
-	childHalted     bool
-	timeoutMutex    sync.Mutex
-	readFromPorts   bool
+	core.DecoratorNode
+	msec           uint
+	timeoutStarted bool
+	childHalted    bool
+	timeoutMutex   sync.Mutex
+	readFromPorts  bool
 }
 
 // NewTimeoutNode creates a new TimeoutNode
-func NewTimeoutNode(name string, config behavior_tree.NodeConfig) *TimeoutNode {
+func NewTimeoutNode(name string, config core.NodeConfig) *TimeoutNode {
 	timeoutNode := &TimeoutNode{
-		DecoratorNode:  *behavior_tree.NewDecoratorNode(name, config),
+		DecoratorNode:  core.NewDecoratorNode(name, config),
 		msec:           0,
 		timeoutStarted: false,
 		childHalted:    false,
 		readFromPorts:  true,
 	}
-	
+
 	// Try to get msec from input ports
 	if msecStr, ok := config.InputPorts["msec"]; ok {
 		if msec, err := strconv.Atoi(msecStr); err == nil && msec >= 0 {
 			timeoutNode.msec = uint(msec)
 		}
 	}
-	
+
 	return timeoutNode
 }
 
 // NewTimeoutNodeFromConfig creates a new TimeoutNode that reads msec from ports
-func NewTimeoutNodeFromConfig(name string, config behavior_tree.NodeConfig) *TimeoutNode {
+func NewTimeoutNodeFromConfig(name string, config core.NodeConfig) *TimeoutNode {
 	return &TimeoutNode{
-		DecoratorNode:  *behavior_tree.NewDecoratorNode(name, config),
+		DecoratorNode:  core.NewDecoratorNode(name, config),
 		msec:           0,
 		timeoutStarted: false,
 		childHalted:    false,
@@ -52,7 +52,7 @@ func NewTimeoutNodeFromConfig(name string, config behavior_tree.NodeConfig) *Tim
 }
 
 // Tick executes the timeout logic
-func (tn *TimeoutNode) Tick() behavior_tree.NodeStatus {
+func (tn *TimeoutNode) Tick() core.NodeStatus {
 	if tn.readFromPorts {
 		var msec uint
 		if value, ok := tn.GetInput("msec"); ok {
@@ -70,7 +70,7 @@ func (tn *TimeoutNode) Tick() behavior_tree.NodeStatus {
 
 	if !tn.timeoutStarted {
 		tn.timeoutStarted = true
-		tn.SetStatus(behavior_tree.NodeStatusRunning)
+		tn.SetStatus(core.NodeStatusRunning)
 		tn.childHalted = false
 
 		if tn.msec > 0 {
@@ -81,7 +81,7 @@ func (tn *TimeoutNode) Tick() behavior_tree.NodeStatus {
 				defer tn.timeoutMutex.Unlock()
 
 				children := tn.Children()
-				if len(children) > 0 && children[0].Status() == behavior_tree.NodeStatusRunning {
+				if len(children) > 0 && children[0].Status() == core.NodeStatusRunning {
 					tn.childHalted = true
 					children[0].Halt()
 					tn.EmitWakeUpSignal()
@@ -95,18 +95,18 @@ func (tn *TimeoutNode) Tick() behavior_tree.NodeStatus {
 
 	if tn.childHalted {
 		tn.timeoutStarted = false
-		return behavior_tree.NodeStatusFailure
+		return core.NodeStatusFailure
 	}
 
 	children := tn.Children()
 	if len(children) == 0 {
 		tn.timeoutStarted = false
-		return behavior_tree.NodeStatusFailure
+		return core.NodeStatusFailure
 	}
 
 	child := children[0]
 	childStatus := child.Tick()
-	if behavior_tree.IsStatusCompleted(childStatus) {
+	if core.IsStatusCompleted(childStatus) {
 		tn.timeoutStarted = false
 		child.HaltAndReset()
 	}

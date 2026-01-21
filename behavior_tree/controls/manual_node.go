@@ -1,23 +1,24 @@
 package controls
 
 import (
-	"github.com/actfuns/gamekit/behavior_tree"
 	"strconv"
+
+	"github.com/actfuns/gamekit/behavior_tree/core"
 )
 
 // ManualSelectorNode allows manual selection of which child to execute
 type ManualSelectorNode struct {
-	behavior_tree.ControlNode
-	runningChildIdx        int
-	previouslyExecutedIdx  int
-	repeatLastSelection    bool
-	selectedChildIndex     int
+	core.ControlNode
+	runningChildIdx       int
+	previouslyExecutedIdx int
+	repeatLastSelection   bool
+	selectedChildIndex    int
 }
 
 // NewManualSelectorNode creates a new manual selector node
-func NewManualSelectorNode(name string, config behavior_tree.NodeConfig) *ManualSelectorNode {
+func NewManualSelectorNode(name string, config core.NodeConfig) *ManualSelectorNode {
 	node := &ManualSelectorNode{
-		ControlNode:           *behavior_tree.NewControlNode(name, config),
+		ControlNode:           core.NewControlNode(name, config),
 		runningChildIdx:       -1,
 		previouslyExecutedIdx: -1,
 		repeatLastSelection:   false,
@@ -27,7 +28,7 @@ func NewManualSelectorNode(name string, config behavior_tree.NodeConfig) *Manual
 }
 
 // Tick executes the manual selection logic
-func (node *ManualSelectorNode) Tick() behavior_tree.NodeStatus {
+func (node *ManualSelectorNode) Tick() core.NodeStatus {
 	children := node.Children()
 	if len(children) == 0 {
 		return node.selectStatus()
@@ -62,16 +63,16 @@ func (node *ManualSelectorNode) Tick() behavior_tree.NodeStatus {
 
 	// If still no child selected, return running
 	if node.selectedChildIndex == -1 {
-		return behavior_tree.NodeStatusRunning
+		return core.NodeStatusRunning
 	}
 
 	// Execute the selected child
 	selectedChild := children[node.selectedChildIndex]
 	status := selectedChild.ExecuteTick()
 
-	if status == behavior_tree.NodeStatusRunning {
+	if status == core.NodeStatusRunning {
 		node.runningChildIdx = node.selectedChildIndex
-		return behavior_tree.NodeStatusRunning
+		return core.NodeStatusRunning
 	}
 
 	// Child completed
@@ -95,8 +96,8 @@ func (node *ManualSelectorNode) Halt() {
 }
 
 // selectStatus handles the case when there are no children
-func (node *ManualSelectorNode) selectStatus() behavior_tree.NodeStatus {
+func (node *ManualSelectorNode) selectStatus() core.NodeStatus {
 	// In Go implementation, we'll return success by default when no children
 	// The actual manual selection would be handled through inputs
-	return behavior_tree.NodeStatusSuccess
+	return core.NodeStatusSuccess
 }

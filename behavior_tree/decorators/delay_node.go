@@ -6,12 +6,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/actfuns/gamekit/behavior_tree"
+	"github.com/actfuns/gamekit/behavior_tree/core"
 )
 
 // DelayNode delays the execution of its child by a specified number of milliseconds.
 type DelayNode struct {
-	behavior_tree.DecoratorNode
+	core.DecoratorNode
 	msec          uint
 	delayStarted  bool
 	delayComplete bool
@@ -21,9 +21,9 @@ type DelayNode struct {
 }
 
 // NewDelayNode creates a new DelayNode
-func NewDelayNode(name string, config behavior_tree.NodeConfig) *DelayNode {
+func NewDelayNode(name string, config core.NodeConfig) *DelayNode {
 	delayNode := &DelayNode{
-		DecoratorNode: *behavior_tree.NewDecoratorNode(name, config),
+		DecoratorNode: core.NewDecoratorNode(name, config),
 		msec:          0,
 		delayStarted:  false,
 		delayComplete: false,
@@ -42,7 +42,7 @@ func NewDelayNode(name string, config behavior_tree.NodeConfig) *DelayNode {
 }
 
 // Tick executes the delay logic
-func (dn *DelayNode) Tick() behavior_tree.NodeStatus {
+func (dn *DelayNode) Tick() core.NodeStatus {
 	if dn.readFromPorts {
 		var delayMsec uint
 		if value, ok := dn.GetInput("delay_msec"); ok {
@@ -61,7 +61,7 @@ func (dn *DelayNode) Tick() behavior_tree.NodeStatus {
 		dn.delayComplete = false
 		dn.delayAborted = false
 		dn.delayStarted = true
-		dn.SetStatus(behavior_tree.NodeStatusRunning)
+		dn.SetStatus(core.NodeStatusRunning)
 
 		// Start the delay timer
 		go func() {
@@ -79,7 +79,7 @@ func (dn *DelayNode) Tick() behavior_tree.NodeStatus {
 	if dn.delayAborted {
 		dn.delayAborted = false
 		dn.delayStarted = false
-		return behavior_tree.NodeStatusFailure
+		return core.NodeStatusFailure
 	}
 
 	if dn.delayComplete {
@@ -87,12 +87,12 @@ func (dn *DelayNode) Tick() behavior_tree.NodeStatus {
 		if len(children) == 0 {
 			dn.delayStarted = false
 			dn.delayAborted = false
-			return behavior_tree.NodeStatusFailure
+			return core.NodeStatusFailure
 		}
 
 		child := children[0]
 		childStatus := child.Tick()
-		if behavior_tree.IsStatusCompleted(childStatus) {
+		if core.IsStatusCompleted(childStatus) {
 			dn.delayStarted = false
 			dn.delayAborted = false
 			child.HaltAndReset()
@@ -100,7 +100,7 @@ func (dn *DelayNode) Tick() behavior_tree.NodeStatus {
 		return childStatus
 	}
 
-	return behavior_tree.NodeStatusRunning
+	return core.NodeStatusRunning
 }
 
 // Halt handles halting the delay node

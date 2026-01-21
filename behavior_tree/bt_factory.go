@@ -3,14 +3,16 @@ package behavior_tree
 import (
 	"fmt"
 	"sync"
+
+	"github.com/actfuns/gamekit/behavior_tree/core"
 )
 
 // TreeNodeCreator is a function that creates a tree node
-type TreeNodeCreator func(string, NodeConfig) (TreeNode, error)
+type TreeNodeCreator func(string, core.NodeConfig) (core.TreeNode, error)
 
 // BehaviorTreeFactory is used to register and create tree nodes
 type BehaviorTreeFactory struct {
-	manifests    map[string]TreeNodeManifest
+	manifests    map[string]core.TreeNodeManifest
 	constructors map[string]TreeNodeCreator
 	mutex        sync.RWMutex
 }
@@ -18,13 +20,13 @@ type BehaviorTreeFactory struct {
 // NewBehaviorTreeFactory creates a new behavior tree factory
 func NewBehaviorTreeFactory() *BehaviorTreeFactory {
 	return &BehaviorTreeFactory{
-		manifests:    make(map[string]TreeNodeManifest),
+		manifests:    make(map[string]core.TreeNodeManifest),
 		constructors: make(map[string]TreeNodeCreator),
 	}
 }
 
 // RegisterBuilder registers a node builder with the factory
-func (f *BehaviorTreeFactory) RegisterBuilder(registrationID string, manifest TreeNodeManifest, creator TreeNodeCreator) error {
+func (f *BehaviorTreeFactory) RegisterBuilder(registrationID string, manifest core.TreeNodeManifest, creator TreeNodeCreator) error {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
@@ -47,7 +49,7 @@ func (f *BehaviorTreeFactory) UnregisterBuilder(registrationID string) {
 }
 
 // CreateNode creates a node using the registered constructor
-func (f *BehaviorTreeFactory) CreateNode(registrationID string, name string, config NodeConfig) (TreeNode, error) {
+func (f *BehaviorTreeFactory) CreateNode(registrationID string, name string, config core.NodeConfig) (TreeNode, error) {
 	f.mutex.RLock()
 	creator, exists := f.constructors[registrationID]
 	f.mutex.RUnlock()
@@ -60,7 +62,7 @@ func (f *BehaviorTreeFactory) CreateNode(registrationID string, name string, con
 }
 
 // GetManifest returns the manifest for a registration ID
-func (f *BehaviorTreeFactory) GetManifest(registrationID string) (TreeNodeManifest, bool) {
+func (f *BehaviorTreeFactory) GetManifest(registrationID string) (core.TreeNodeManifest, bool) {
 	f.mutex.RLock()
 	defer f.mutex.RUnlock()
 
@@ -85,6 +87,6 @@ func (f *BehaviorTreeFactory) Clear() {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
-	f.manifests = make(map[string]TreeNodeManifest)
+	f.manifests = make(map[string]core.TreeNodeManifest)
 	f.constructors = make(map[string]TreeNodeCreator)
 }
