@@ -47,7 +47,7 @@ type FSM interface {
 	// Previous returns the previous state
 	Previous() State
 
-	// States returns all states in the machine
+	// States returns a copy of all states in the machine
 	States() map[StateId]State
 
 	// Add adds a state to the machine

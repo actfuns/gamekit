@@ -1,6 +1,9 @@
 package fsm
 
-import "fmt"
+import (
+	"fmt"
+	"maps"
+)
 
 // BaseFSM is the finite state machine implementation
 type BaseFSM struct {
@@ -36,7 +39,10 @@ func (m *BaseFSM) Previous() State {
 
 // States returns all states in the machine
 func (m *BaseFSM) States() map[StateId]State {
-	return m.states
+	// Return a shallow copy to avoid exposing internal map
+	copyMap := make(map[StateId]State, len(m.states))
+	maps.Copy(copyMap, m.states)
+	return copyMap
 }
 
 // Add adds a state to the machine
@@ -102,6 +108,20 @@ func (m *BaseFSM) IsPrevious(id StateId) bool {
 
 // Remove removes a state from the machine
 func (m *BaseFSM) Remove(id StateId) {
+	// Remove the state from the registry
+	if s, exists := m.states[id]; exists {
+		// If the removed state is current/previous/initial, clear those references
+		if m.current != nil && m.current == s {
+			m.current = nil
+		}
+		if m.previous != nil && m.previous == s {
+			m.previous = nil
+		}
+		if m.initial != nil && m.initial == s {
+			m.initial = nil
+		}
+	}
+
 	delete(m.states, id)
 }
 
@@ -122,6 +142,9 @@ func (m *BaseFSM) HandleEvent(eventType EventType) {
 // Clear removes all states from the machine
 func (m *BaseFSM) Clear() {
 	m.states = make(map[StateId]State)
+	m.current = nil
+	m.previous = nil
+	m.initial = nil
 }
 
 // Init sets the initial state as the current state
