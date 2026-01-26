@@ -3,44 +3,39 @@ package behavior_tree
 import (
 	"fmt"
 	"sync"
+
+	"github.com/actfuns/gamekit/behavior_tree/core"
 )
 
 // BehaviorTree represents a complete behavior tree
 type BehaviorTree struct {
-	rootNode   TreeNode
-	blackboard *Blackboard
-	factory    *BehaviorTreeFactory
+	rootNode   core.Node
+	blackboard *core.Blackboard
 	mutex      sync.RWMutex
 }
 
 // NewBehaviorTree creates a new behavior tree
-func NewBehaviorTree(rootNode TreeNode, blackboard *Blackboard, factory *BehaviorTreeFactory) *BehaviorTree {
+func NewBehaviorTree(rootNode core.Node, blackboard *core.Blackboard) *BehaviorTree {
 	return &BehaviorTree{
 		rootNode:   rootNode,
 		blackboard: blackboard,
-		factory:    factory,
 	}
 }
 
 // RootNode returns the root node of the tree
-func (bt *BehaviorTree) RootNode() TreeNode {
+func (bt *BehaviorTree) RootNode() core.Node {
 	return bt.rootNode
 }
 
 // Blackboard returns the blackboard associated with the tree
-func (bt *BehaviorTree) Blackboard() *Blackboard {
+func (bt *BehaviorTree) Blackboard() *core.Blackboard {
 	return bt.blackboard
 }
 
-// Factory returns the factory used to create nodes
-func (bt *BehaviorTree) Factory() *BehaviorTreeFactory {
-	return bt.factory
-}
-
 // Tick executes one tick of the behavior tree
-func (bt *BehaviorTree) Tick() NodeStatus {
+func (bt *BehaviorTree) Tick() core.NodeStatus {
 	if bt.rootNode == nil {
-		return NodeStatusFailure
+		return core.NodeStatusFailure
 	}
 
 	bt.mutex.Lock()
@@ -65,41 +60,36 @@ func (bt *BehaviorTree) PrintTree() {
 }
 
 // ApplyVisitor applies a visitor function to all nodes in the tree
-func (bt *BehaviorTree) ApplyVisitor(visitor func(TreeNode)) {
+func (bt *BehaviorTree) ApplyVisitor(visitor func(core.Node)) {
 	if bt.rootNode != nil {
 		ApplyRecursiveVisitor(bt.rootNode, visitor)
 	}
 }
 
 // Create creates a behavior tree from a root node
-func Create(rootNode TreeNode) (*BehaviorTree, error) {
+func Create(rootNode core.Node) (*BehaviorTree, error) {
 	if rootNode == nil {
 		return nil, fmt.Errorf("root node cannot be nil")
 	}
 
-	blackboard := NewBlackboard()
-	factory := NewBehaviorTreeFactory()
-
-	return NewBehaviorTree(rootNode, blackboard, factory), nil
+	blackboard := core.NewBlackboard()
+	return NewBehaviorTree(rootNode, blackboard), nil
 }
 
 // CreateWithBlackboard creates a behavior tree with a specific blackboard
-func CreateWithBlackboard(rootNode TreeNode, blackboard *Blackboard) (*BehaviorTree, error) {
+func CreateWithBlackboard(rootNode core.Node, blackboard *core.Blackboard) (*BehaviorTree, error) {
 	if rootNode == nil {
 		return nil, fmt.Errorf("root node cannot be nil")
 	}
 
 	if blackboard == nil {
-		blackboard = NewBlackboard()
+		blackboard = core.NewBlackboard()
 	}
-
-	factory := NewBehaviorTreeFactory()
-
-	return NewBehaviorTree(rootNode, blackboard, factory), nil
+	return NewBehaviorTree(rootNode, blackboard), nil
 }
 
 // ApplyRecursiveVisitor applies a visitor function to all nodes in the tree
-func ApplyRecursiveVisitor(rootNode TreeNode, visitor func(TreeNode)) {
+func ApplyRecursiveVisitor(rootNode core.Node, visitor func(core.Node)) {
 	if rootNode == nil {
 		return
 	}
@@ -111,7 +101,7 @@ func ApplyRecursiveVisitor(rootNode TreeNode, visitor func(TreeNode)) {
 }
 
 // PrintTreeRecursively prints the tree hierarchy recursively
-func PrintTreeRecursively(rootNode TreeNode, indent string) {
+func PrintTreeRecursively(rootNode core.Node, indent string) {
 	if rootNode == nil {
 		return
 	}
